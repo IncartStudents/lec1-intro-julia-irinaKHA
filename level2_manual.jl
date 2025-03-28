@@ -135,10 +135,12 @@ end
 
 struct Banana <: Fruits  
     color::String
-    taste::String
+    size::Int
 end
 d = Apple("red", 45)
 color(d)
+b = Banana("yellow", 50)
+color(b)
 
 
 #===========================================================================================
@@ -226,19 +228,9 @@ str1*str2 # 1x1
 
 
 # В одну строку выбрать из массива [1, -2, 2, 3, 4, -5, 0] только четные и положительные числа
-#ИСПРАВИТЬ
+#ОТВЕТ:
 A = [1, -2, 2, 3, 4, -5, 0]
-fun(a, d) = push![d, a]
-D = [0 0 0]
-for i=1:length(A)
-if A[i] > 0 && A[i]%2 == 0
-    for j=1:length(A)
-        D[j] = A[i]
-    end
-else
-continue
-end
-end
+D = [x for x in A if x > 0 && x % 2 == 0]
 D
 
 # Объяснить следующий код обработки массива names - что за number мы в итоге определили?
@@ -252,7 +244,20 @@ numbers_sorted = sort(numbers)
 number = findfirst(n -> !(n in numbers_sorted), 0:9)
 
 # Упростить этот код обработки:
-
+using Random
+Random.seed!(123)
+names = [string(rand('A':'Z'), '_', rand('0':'9'), rand([".csv", ".bin"])) for _ in 1:100]
+same_names = unique([split(y, ".")[1] for y in names if startswith(y, "A")])
+numbers = sort(parse.(Int, map(x -> split(x, "_")[end], same_names)))
+number = findfirst(n -> !(n in numbers), 0:9)
+#=
+ОТВЕТ: элементы массива names имеют вид "B_9.bin"
+код рассматривает элементы, что начинаются на А и сохраняет их цифру и после сортирует 
+("А_0.bin" -> A_0 -> 0)
+в findfirst создается массив элементов от 0 до 9, ищется первый элемент, который не 
+встречается в векторе numbers_sorted и выводит его порядковый номер 
+(где 0:9, если нет 1 - то результат: 2)
+=#
 
 #===========================================================================================
 4. Свой тип данных на общих интерфейсах
@@ -262,7 +267,15 @@ number = findfirst(n -> !(n in numbers_sorted), 0:9)
 написать свой тип ленивого массива, каждый элемент которого
 вычисляется при взятии индекса (getindex) по формуле (index - 1)^2
 =#
+#ОТВЕТ:
+struct Lazyarr
+    length::Int
+end
 
+Base.getindex(arr::Lazyarr, i::Int) = (i - 1)^2  
+
+A = Lazyarr(15) 
+println(A[15])
 #=
 Написать два типа объектов команд, унаследованных от AbstractCommand,
 которые применяются к массиву:
@@ -273,7 +286,33 @@ number = findfirst(n -> !(n in numbers_sorted), 0:9)
 abstract type AbstractCommand end
 apply!(cmd::AbstractCommand, target::Vector) = error("Not implemented for type $(typeof(cmd))")
 
+abstract type AbstractCommand end
+apply!(cmd::AbstractCommand, target::Vector) = error("Not implemented for type $(typeof(cmd))")
 
+struct Sort <: AbstractCommand
+end
+
+struct ChangeAt <: AbstractCommand
+    index::Int
+    val::Any
+end
+
+function apply!(cmd::Sort, target::Vector)
+    sort!(target)
+end
+
+function apply!(cmd::ChangeAt, target::Vector)
+    target[cmd.index] = cmd.val
+end
+
+A = [4, 5, 6, 1, 0]
+B = Sort() 
+apply!(B, A)
+println(A)
+
+C = ChangeAt(2, 44)
+apply!(C, A)
+println(A)
 # Аналогичные команды, но без наследования и в виде замыканий (лямбда-функций)
 
 
@@ -282,7 +321,9 @@ apply!(cmd::AbstractCommand, target::Vector) = error("Not implemented for type $
 =#
 
 # Написать тест для функции
-
+using Test
+foo(x) = length(x)^2
+@test foo("bar") == 9
 
 #===========================================================================================
 6. Дебаг: как отладить функцию по шагам?
