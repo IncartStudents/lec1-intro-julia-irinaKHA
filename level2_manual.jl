@@ -314,7 +314,22 @@ C = ChangeAt(2, 44)
 apply!(C, A)
 println(A)
 # Аналогичные команды, но без наследования и в виде замыканий (лямбда-функций)
+function Sort2()
+    return (target::Vector) -> sort!(target)
+end
 
+function ChangeAt2(index::Int, val::Any)
+    return (target::Vector) -> target[index] = val
+end
+
+UseSort2 = Sort2()
+UseChangeAt2 = ChangeAt2(2, 44)
+
+A = [4, 5, 6, 1, 0]
+UseSort2(A)
+println(A)
+UseChangeAt2(A)
+println(A)
 
 #===========================================================================================
 5. Тесты: как проверять функции?
@@ -332,16 +347,31 @@ foo(x) = length(x)^2
 #=
 Отладить функцию по шагам с помощью макроса @enter и точек останова
 =#
+function foo(x, y)
+    a = x + y
+    b = a^2 # x=5 y=3 a=8
+    return b # x=5 y=3 b= 64 a=8
+end
 
+@enter foo(5, 3)
 
 #===========================================================================================
 7. Профилировщик: как оценить производительность функции?
 =#
-
+using Profile
+функция для профилировки
+#профилирование включается для данного вызова с помощью @profil eмакроса.
+@profile 'имя функции'
+#Получить результаты профилирования
+Profile.print()
 #=
 Оценить производительность функции с помощью макроса @profview,
 и добавить в этот репозиторий файл со скриншотом flamechart'а
 =#
+
+import Pkg
+Pkg.add("ProfileView")
+using Profile
 function generate_data(len)
     vec1 = Any[]
     for k = 1:len
@@ -352,12 +382,24 @@ function generate_data(len)
     vec3 = vec2 .^ 3 .- (sum(vec2) / len)
     return vec3
 end
-
-@time generate_data(1_000_000);
+generate_data(4)
+@profview generate_data(1_000_000)
 
 
 # Переписать функцию выше так, чтобы она выполнялась быстрее:
+using ProfileView
 
+function generate_data(len::Int) 
+    vec1 = Vector{Float64}(undef, len)
+    for i = 1:len
+        vec1[i] = randn()
+    end
+    vec2 = sort(vec1)
+    vec3 = vec2 .^ 3 .- (sum(vec2) / len)
+    return vec3
+end
+
+@profview generate_data(1_000_000);
 
 #===========================================================================================
 8. Отличия от матлаба: приращение массива и предварительная аллокация?
@@ -368,17 +410,82 @@ end
 и для каждой точки входного (x) и выходного (y) выходного массива вычисляет:
 y[i] = x[i] - x[i-1]
 =#
+x = [10, 2, 3, 4, 4]
 
+function fun(x)
+    n = length(x)
+    y = Vector(undef, n-1)
+
+    for i in 1:(n-1)
+    y[i] = x[i+1] - x[i]
+    end
+    return y
+end
+
+d = fun(x)
 #=
 Аналогичная функция, которая отличается тем, что внутри себя не аллоцирует новый массив y,
 а принимает его первым аргументом, сам массив аллоцируется до вызова функции
 =#
+x = [10, 2, 3, 4, 4]
+y = Vector(undef, length(x)-1)
+
+function fun(y, x)
+    n = length(x)
+    for i in 1:(n-1)
+    y[i] = x[i+1] - x[i]
+    end
+    return y
+end
+
+d = fun(x)
 
 #=
 Написать код, который добавляет элементы в конец массива, в начало массива,
 в середину массива
 =#
+x = [10, 2, 4, 4, 10]
+y = ["meow", "meow"]
+z = Vector(undef, length(x)+length(y))
 
+function beginning(z, x, y)
+    for i in 1:(length(y))
+    z[i] = y[i]
+    end
+    for i in 1:(length(x))
+    z[length(y)+i] = x[i]
+    end
+    return z
+end
+d = beginning(z, x, y)
+
+function middle(z, x, y)
+    n = div(length(x), 2)
+
+    for i in 1:n
+        z[i] = x[i]
+    end
+    for i in 1:(length(y))
+        z[n+i] = y[i]
+    end
+    for i in (n+1):length(x)
+        z[length(y)+i] = x[i]
+    end
+    return z
+end
+d = middle(z, x, y)
+
+
+function ending(z, x, y)
+    for i in 1:(length(x))
+        z[i] = x[i]
+        end
+        for i in 1:(length(y))
+        z[length(x)+i] = y[i]
+        end
+        return z
+end
+d = ending(z, x, y)
 
 #===========================================================================================
 9. Модули и функции: как оборачивать функции внутрь модуля, как их экспортировать
@@ -392,10 +499,14 @@ y[i] = x[i] - x[i-1]
 воспользоваться обеими функциями вне модуля
 =#
 module Foo
-    #export ?
+    export foo
+    end
+ function foo(x, y) x^2 + 2x - 1
 end
-# using .Foo ?
-# import .Foo ?
+foo2(a, b) = a + b
+ using .Foo
+foo(2, 3)
+foo2(1, 4)
 
 
 #===========================================================================================
@@ -403,16 +514,59 @@ end
 =#
 
 # Что такое environment, как задать его, как его поменять во время работы?
+#= ОТВЕТ:
+Переменная окружения - глобальная переменная, задается через ENV
+значением этой переменной могут быть:
+место размещения файлов в системе, рабочие директории, модули, пакеты
+ENV["переменная"] = "значение" 
+get(ENV, "переменная окружения", "значение если переменной нет")
+ можено добавлять пакеты в окружение с помощью команды add
+ можете сменить окружение, выполнив команду activate в режиме Pkg:
+=#
+my_variable1 = get(ENV, "var1", "Default value")
+println(my_variable)
+
+ENV["var2"] = "раз" 
+my_variable2 = get(ENV, "var2", "Default value")
+println(my_variable2)
 
 # Что такое пакет (package), как добавить новый пакет?
+#= ОТВЕТ:
+Пакет - встроенный дополнительный функционал,
+import Pkg
+Pkg.add("Example") # где в "" - указан нужный пакет
+using Example # для запуска/использования пакета
+=#
 
 # Как начать разрабатывать чужой пакет?
+#= ОТВЕТ:
+1. добавить пакет (Pkg.add("MyPackage"))
+2. клонировать репозиторий к себе (git clone https://.../MyPackage.jl)
+3. Перейти в каталог пакета (cd MyPackage.jl)
+4. Активировать пакет 
+using Pkg
+Pkg.activate(".") 
+=#
 
 #=
 Как создать свой пакет?
 (необязательно, эксперименты с PkgTemplates проводим вне этого репозитория)
 =#
+mutable struct Animal
+    cat::String
+    dog::String
+end
 
+Base.show(i0::IO, animal::Animal) = print(i0, "Animal(cat=\"", animal.cat, "\", dog=\"", animal.dog, "\")")
+my_animal = Animal("Имя_кота", "Имя_собаки")
+println(my_animal)
+
+Base.copy(animal::Animal) = Animal(animal.cat, animal.dog) 
+Base.show(i0::IO, animal::Animal) = print(i0, "Animal(cat=\"", animal.cat, "\", dog=\"", animal.dog, "\")")
+my_animal_2 = copy(my_animal)
+println("копия ", my_animal_2)
+my_animal_2.cat = "Милли"
+println("копия ", my_animal_2)
 
 #===========================================================================================
 11. Сохранение переменных в файл и чтение из файла.
