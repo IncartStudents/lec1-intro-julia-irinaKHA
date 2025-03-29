@@ -383,6 +383,7 @@ function generate_data(len)
     return vec3
 end
 generate_data(4)
+@time generate_data(4); # 0.000041 seconds (45 allocations: 1.328 KiB)
 @profview generate_data(1_000_000)
 
 
@@ -398,7 +399,8 @@ function generate_data(len::Int)
     vec3 = vec2 .^ 3 .- (sum(vec2) / len)
     return vec3
 end
-
+generate_data(4)
+@time generate_data(4); #0.000004 seconds (6 allocations: 288 bytes)
 @profview generate_data(1_000_000);
 
 #===========================================================================================
