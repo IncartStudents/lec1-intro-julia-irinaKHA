@@ -574,11 +574,28 @@ println("копия ", my_animal_2)
 11. Сохранение переменных в файл и чтение из файла.
 Подключить пакеты JLD2, CSV.
 =#
-
+import Pkg
+Pkg.add("JLD2") 
+Pkg.add("CSV") 
+Pkg.add("DataFrames") 
+using CSV, JLD2, DataFrames
 # Сохранить и загрузить произвольные обхекты в JLD2, сравнить их
+data1 = 5
+data2 = 6
+jldsave("my_data.jld2"; data1=data1, data2=data2)
 
+loaded_data = load("my_data.jld2")
+println(data1 > data2)
 # Сохранить и загрузить табличные объекты (массивы) в CSV, сравнить их
+data3 = (Name=["Mizi"], Age=[19])
+data4 = (Name=["Ivan"], Age=[20])
 
+CSV.write("my_matrix_one.csv", data3)
+CSV.write("my_matrix_two.csv", data4)
+
+a = CSV.read("my_matrix_one.csv", DataFrame)
+b = CSV.read("my_matrix_two.csv", DataFrame)
+println(a[1, 2] > b[1, "Age"])
 
 #===========================================================================================
 12. Аргументы запуска Julia
@@ -587,12 +604,29 @@ println("копия ", my_animal_2)
 #=
 Как задать окружение при запуске?
 =#
+#= ОТВЕТ:
+import Pkg
+Pkg.add("NAME") 
+using NAME
+=#
 
 #=
 Как задать скрипт, который будет выполняться при запуске:
 а) из файла .jl
 б) из текста команды? (см. флаг -e)
 =#
+#а) создаем файл C:\Users\...\proverka.jl . После в файле где работаем пишем:
+include("proverka.jl")
+
+#б)
+#=Нажмите клавишу Windows и S.
+Введите cmd в поле поиска.
+Нажмите правой кнопкой мыши на командную 
+строку и выберите «Запуск от имени администратора».
+
+C:\Users\IrinaADM\AppData\Local\Programs\Julia-1.11.3\bin\julia -e "println(\"Hi hi hiiii!\")"
+=#
+
 
 #=
 После выполнения задания Boids запустить julia из командной строки,
